@@ -1,6 +1,6 @@
 # Testing Strategy for the Standard Itself
 
-The standard must be tested before it is deployed. This document defines the testing approach for `claude-dev-suit` before any broad rollout.
+The standard must be tested before it is deployed. This document defines the testing approach for `claude-dev-suite` before any broad rollout.
 
 ---
 
@@ -148,7 +148,7 @@ bash tests/test-idempotency.sh sdd-fixture-greenfield
 
 ## CI for the Standard Repo
 
-Add a GitHub Actions workflow to `claude-dev-suit` itself that runs on every PR:
+Add a GitHub Actions workflow to `claude-dev-suite` itself that runs on every PR:
 
 ```yaml
 # .github/workflows/test-installer.yml

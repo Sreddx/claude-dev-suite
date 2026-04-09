@@ -1,8 +1,8 @@
 # SDD Dev Suite — Phase 1 v2 Implementation Spec
 
-> **Purpose:** This document is the complete spec for refactoring the claude-dev-suit repository. Pass this to Claude Code as the implementation brief. Every file change, new file, and behavioral requirement is specified below.
+> **Purpose:** This document is the complete spec for refactoring the claude-dev-suite repository. Pass this to Claude Code as the implementation brief. Every file change, new file, and behavioral requirement is specified below.
 >
-> **Repo:** `claude-dev-suit` (the centralized standard distribution system)
+> **Repo:** `claude-dev-suite` (the centralized standard distribution system)
 > **Scope:** 14 agents, 6 skills, installer, templates, 1 new command, 2 new scripts
 > **Constraint:** Non-destructive. All changes must preserve the existing version marker system. User-customized agents (without SDD version markers) must never be overwritten.
 

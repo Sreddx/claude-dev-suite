@@ -92,7 +92,7 @@ Before the first SDD cycle in this repo, project memory MUST be generated:
 
 ```bash
 gh workflow run sdd-sync-targeted.yml \
-  -R Sreddx/claude-dev-suit \
+  -R Sreddx/claude-dev-suite \
   -f repos="legacy-monolith" \
   -f profile="brownfield"
 ```

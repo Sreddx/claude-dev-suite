@@ -65,7 +65,7 @@ This profile extends the SDD baseline for repos where the primary output is an A
 
 ```bash
 gh workflow run sdd-sync-targeted.yml \
-  -R Sreddx/claude-dev-suit \
+  -R Sreddx/claude-dev-suite \
   -f repos="my-api-service" \
   -f profile="backend-api"
 ```

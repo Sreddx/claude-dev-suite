@@ -57,7 +57,7 @@ npx @fission-ai/openspec@1.4.0 init --yes
 ### Baseline upgrade (skills + AGENTS.md sections)
 
 1. Update the skill file or AGENTS.md template with a version bump
-2. Open a PR to `claude-dev-suit` with the change
+2. Open a PR to `claude-dev-suite` with the change
 3. After merge, the next sync to any repo will apply the new version (if newer than what's installed)
 4. Target repos with the old version see the update on their next PR (via ruleset) or manual sync
 
@@ -95,15 +95,15 @@ Before any upgrade, preview what will change:
 ```bash
 # Diff against a single repo
 gh workflow run sdd-sync-targeted.yml \
-  -R Sreddx/claude-dev-suit \
+  -R Sreddx/claude-dev-suite \
   -f repos="my-repo" \
   -f dry_run="true"
 
 # Diff across all repos (audit mode)
 gh workflow run sdd-sync-targeted.yml \
-  -R Sreddx/claude-dev-suit \
+  -R Sreddx/claude-dev-suite \
   -f repos="all" \
-  -f exclude="claude-dev-suit" \
+  -f exclude="claude-dev-suite" \
   -f dry_run="true"
 ```
 
@@ -133,19 +133,19 @@ git revert <commit-sha>
 git push
 ```
 
-The sync commit message format `chore(sdd): sync claude-dev-suit v{VERSION}` makes it trivially identifiable.
+The sync commit message format `chore(sdd): sync claude-dev-suite v{VERSION}` makes it trivially identifiable.
 
 ### Option 3: Pin to a prior version
 
 To lock a repo to a specific prior version:
 ```bash
 gh workflow run sdd-sync-targeted.yml \
-  -R Sreddx/claude-dev-suit \
+  -R Sreddx/claude-dev-suite \
   -f repos="my-repo" \
   -f version="20260101"
 ```
 
-This re-syncs to the state of `claude-dev-suit` as of that date tag.
+This re-syncs to the state of `claude-dev-suite` as of that date tag.
 
 ---
 

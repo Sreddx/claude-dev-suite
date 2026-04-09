@@ -22,7 +22,7 @@ Distributes a shared delivery contract across all org repos — spec structure, 
 
 ```yaml
 # .github/workflows/sdd-sync.yml
-- uses: Sreddx/claude-dev-suit@main
+- uses: Sreddx/claude-dev-suite@main
   with:
     agent_suite: 'true'
     agent_suite_version: '1.0.0'

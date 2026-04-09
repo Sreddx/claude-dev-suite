@@ -67,7 +67,7 @@ This profile is installed alongside the baseline when `profile=frontend` is spec
 
 ```bash
 gh workflow run sdd-sync-targeted.yml \
-  -R Sreddx/claude-dev-suit \
+  -R Sreddx/claude-dev-suite \
   -f repos="my-frontend-app" \
   -f profile="frontend"
 ```

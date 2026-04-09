@@ -1,7 +1,7 @@
 # Targeted SDD Sync — for syncing specific repos with full topology control.
 #
 # Usage:
-#   1. Go to Actions tab in claude-dev-suit repo
+#   1. Go to Actions tab in claude-dev-suite repo
 #   2. Select "SDD Sync (Targeted)"
 #   3. Click "Run workflow"
 #   4. Pick the repo type (topology) and enter the repo name(s)
@@ -64,7 +64,7 @@ on:
       exclude:
         description: 'Comma-separated repo names to exclude (only used when repos=all)'
         required: false
-        default: 'claude-dev-suit,.github'
+        default: 'claude-dev-suite,.github'
         type: string
 
 jobs:
@@ -147,7 +147,7 @@ jobs:
 
       - name: Run Rojas SDD Cycle
         id: sdd
-        uses: Sreddx/claude-dev-suit@main
+        uses: Sreddx/claude-dev-suite@main
         with:
           repo_type: ${{ inputs.repo_type }}
           dry_run: ${{ inputs.dry_run }}

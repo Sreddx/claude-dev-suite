@@ -74,7 +74,7 @@ Conflating them causes bloat and fragility.
 
 ```yaml
 # .github/workflows/sdd-sync.yml
-- uses: Sreddx/claude-dev-suit@main
+- uses: Sreddx/claude-dev-suite@main
   with:
     agent_suite: 'true'
     agent_suite_version: '1.0.0'
@@ -564,16 +564,16 @@ gh workflow run sdd-sync-targeted.yml -f repos="my-repo" -f dry_run="false"
 gh workflow run sdd-sync-targeted.yml -f repos="repo-a,repo-b,repo-c"
 
 # All repos
-gh workflow run sdd-sync-targeted.yml -f repos="all" -f exclude="claude-dev-suit"
+gh workflow run sdd-sync-targeted.yml -f repos="all" -f exclude="claude-dev-suite"
 ```
 
 ### Via Repository Rulesets (Enterprise Cloud)
 
 1. **Org Settings → Rulesets → New ruleset**
 2. Rule: **Require workflows to pass**
-3. Workflow: `Sreddx/claude-dev-suit/.github/workflows/sdd-sync-ruleset.yml@main`
+3. Workflow: `Sreddx/claude-dev-suite/.github/workflows/sdd-sync-ruleset.yml@main`
 4. Start in **Evaluate** mode, switch to **Active** after pilot evidence
-5. Exclude: `claude-dev-suit`, archived repos, infra-only repos
+5. Exclude: `claude-dev-suite`, archived repos, infra-only repos
 
 ### Recommended sequence
 

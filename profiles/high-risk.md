@@ -90,7 +90,7 @@ Any match is treated as a BLOCKER — commit is halted, human review required.
 
 ```bash
 gh workflow run sdd-sync-targeted.yml \
-  -R Sreddx/claude-dev-suit \
+  -R Sreddx/claude-dev-suite \
   -f repos="payment-service,auth-service" \
   -f profile="high-risk"
 ```

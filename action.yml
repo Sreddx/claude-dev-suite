@@ -450,7 +450,7 @@ runs:
         # CLAUDE.md — real file pointing readers to AGENTS.md (not a symlink: tools read via GitHub API won't dereference symlinks)
         if [ ! -f "CLAUDE.md" ] && [ -f "AGENTS.md" ]; then
           printf '%s\n' \
-            '<!-- This file is managed by claude-dev-suit. Do not edit manually. -->' \
+            '<!-- This file is managed by claude-dev-suite. Do not edit manually. -->' \
             '<!-- See AGENTS.md for the full agent and AI tooling guidance. -->' \
             '' \
             '> **Claude Code users:** The primary guidance for this repo lives in [`AGENTS.md`](./AGENTS.md).' \
@@ -462,7 +462,7 @@ runs:
         if [ ! -f ".github/copilot-instructions.md" ] && [ -f "AGENTS.md" ]; then
           mkdir -p .github
           printf '%s\n' \
-            '<!-- This file is managed by claude-dev-suit. Do not edit manually. -->' \
+            '<!-- This file is managed by claude-dev-suite. Do not edit manually. -->' \
             '<!-- See AGENTS.md for the full agent and AI tooling guidance. -->' \
             '' \
             '> **GitHub Copilot users:** The primary guidance for this repo lives in [`AGENTS.md`](../AGENTS.md).' \
@@ -520,12 +520,12 @@ runs:
           BRANCH_NAME="${PR_PREFIX}/v${VERSION}-${TIMESTAMP}"
 
           git checkout -b "$BRANCH_NAME"
-          git commit -m "chore(sdd): sync claude-dev-suit v${VERSION}"
+          git commit -m "chore(sdd): sync claude-dev-suite v${VERSION}"
           git push -u origin "$BRANCH_NAME"
 
           # Ensure the sdd-sync label exists in the target repo
           gh label create "sdd-sync" \
-            --description "Automated SDD cycle sync from claude-dev-suit" \
+            --description "Automated SDD cycle sync from claude-dev-suite" \
             --color "1D76DB" 2>/dev/null || true
 
           # Close any stale open SDD sync PRs targeting the same base branch
@@ -565,7 +565,7 @@ runs:
           {
             echo "## SDD Cycle Sync"
             echo ""
-            echo "Automated sync from \`claude-dev-suit\`."
+            echo "Automated sync from \`claude-dev-suite\`."
             echo ""
             echo "### What changed"
             echo "- **AGENTS.md** sections merged (non-destructive, versioned)"
@@ -586,13 +586,13 @@ runs:
             echo "**Version:** \`${VERSION}\`"
             echo ""
             echo "---"
-            echo "*This PR was created automatically by [claude-dev-suit](https://github.com/Sreddx/claude-dev-suit). Review and merge when ready.*"
+            echo "*This PR was created automatically by [claude-dev-suite](https://github.com/Sreddx/claude-dev-suite). Review and merge when ready.*"
           } > /tmp/sdd-pr-body.md
 
           PR_URL=$(gh pr create \
             --base "$BASE_BRANCH" \
             --head "$BRANCH_NAME" \
-            --title "chore(sdd): sync claude-dev-suit v${VERSION}" \
+            --title "chore(sdd): sync claude-dev-suite v${VERSION}" \
             --label "sdd-sync" \
             --body-file /tmp/sdd-pr-body.md)
 
@@ -601,7 +601,7 @@ runs:
 
         else
           # --- Direct push flow (for ruleset workflow / non-protected branches) ---
-          git commit -m "chore(sdd): sync claude-dev-suit v${VERSION}"
+          git commit -m "chore(sdd): sync claude-dev-suite v${VERSION}"
           git push
           echo "Pushed changes directly to $(git rev-parse --abbrev-ref HEAD)"
         fi

@@ -11,7 +11,7 @@
 # Setup:
 #   1. Go to org Settings > Rulesets > New ruleset
 #   2. Add rule: "Require workflows to pass"
-#   3. Point to: Sreddx/claude-dev-suit/.github/workflows/sdd-sync-ruleset.yml@main
+#   3. Point to: Sreddx/claude-dev-suite/.github/workflows/sdd-sync-ruleset.yml@main
 #   4. Select target repos: "All repositories" or specific ones
 #
 name: Rojas SDD Sync (Ruleset)
@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Rojas SDD Cycle
-        uses: Sreddx/claude-dev-suit@main
+        uses: Sreddx/claude-dev-suite@main
         with:
           airis_gateway_url: 'http://localhost:9400/sse'
           context7_enabled: 'true'

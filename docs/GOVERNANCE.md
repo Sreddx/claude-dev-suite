@@ -164,7 +164,7 @@ If a sync causes issues:
 3. For any committed sync, `git revert` the sync commit (it is always a single, labeled commit)
 
 ### Audit trail
-Every sync commit is tagged: `chore(sdd): sync claude-dev-suit v{VERSION}`
+Every sync commit is tagged: `chore(sdd): sync claude-dev-suite v{VERSION}`
 Every skill file carries its version in frontmatter.
 Every AGENTS.md section carries its version in the HTML comment marker.
 This makes it trivial to audit which version of the standard is running where.
