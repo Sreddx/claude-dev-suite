@@ -1,0 +1,26 @@
+# Rojas SDD Cycle — Codex MCP Configuration
+# Deep merged with existing config. Existing servers are preserved.
+
+[mcp_servers.airis-mcp-gateway]
+type = "sse"
+url = "AIRIS_GATEWAY_URL"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@anthropic-ai/mcp-server-playwright@latest"]
+
+[mcp_servers.magic]
+command = "npx"
+args = ["-y", "@21st-dev/magic-mcp@latest"]
+
+[mcp_servers.morphllm]
+command = "npx"
+args = ["-y", "@morph-llm/morph-mcp@latest"]
+
+[mcp_servers.morphllm.env]
+MORPH_API_KEY = ""
+ENABLED_TOOLS = "edit_file,warpgrep_codebase_search"

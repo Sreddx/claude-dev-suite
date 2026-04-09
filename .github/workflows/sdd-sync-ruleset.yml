@@ -1,0 +1,41 @@
+# Required Workflow for Repository Rulesets (Enterprise Cloud)
+#
+# This workflow is called automatically by GitHub when a PR is opened
+# in any repo covered by the org ruleset. It does NOT need to exist
+# in the target repo — GitHub runs it from this source repo.
+#
+# Since this runs in the context of an existing PR, it commits SDD
+# changes directly to the PR branch (pr_enabled=false) instead of
+# creating a separate PR.
+#
+# Setup:
+#   1. Go to org Settings > Rulesets > New ruleset
+#   2. Add rule: "Require workflows to pass"
+#   3. Point to: Sreddx/claude-dev-suit/.github/workflows/sdd-sync-ruleset.yml@main
+#   4. Select target repos: "All repositories" or specific ones
+#
+name: Rojas SDD Sync (Ruleset)
+
+on:
+  workflow_call:
+
+jobs:
+  sdd-sync:
+    name: Sync SDD Cycle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+
+      - name: Run Rojas SDD Cycle
+        uses: Sreddx/claude-dev-suit@main
+        with:
+          airis_gateway_url: 'http://localhost:9400/sse'
+          context7_enabled: 'true'
+          airis_catalog_servers: 'all'
+          dry_run: 'false'
+          pr_enabled: 'false'

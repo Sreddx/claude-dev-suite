@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "echo \"[TRACE] $(date -Iseconds) BLOCKED Write/Edit on validator\" && exit 1",
+        "description": "Block Write/Edit on validator agent (read-only enforcement)",
+        "agent": "validator"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "command": "echo \"[TRACE] $(date -Iseconds) tool=$TOOL_NAME\" >> .claude/state/agent-trace.log",
+        "description": "Log every tool call for session observability"
+      }
+    ],
+    "Stop": [
+      {
+        "command": "bash scripts/sdd-session-report.sh 2>/dev/null || true",
+        "description": "Generate agent invocation summary at session end"
+      }
+    ]
+  }
+}

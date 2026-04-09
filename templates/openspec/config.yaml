@@ -1,0 +1,32 @@
+# Rojas SDD Cycle — OpenSpec Configuration
+# This profile configures OpenSpec for the Rojas two-layer workflow.
+
+profile: rojas-sdd
+workflows:
+  - propose
+  - explore
+  - new
+  - continue
+  - apply
+  - ff
+  - sync
+  - archive
+  - bulk-archive
+  - verify
+  - onboard
+
+settings:
+  specs_dir: openspec/specs
+  changes_dir: openspec/changes
+  auto_archive: false
+  require_verify_before_archive: true
+
+# Multi-repo configuration (optional — omit for monorepo/standalone projects)
+# repos:
+#   api:
+#     path: ../api              # relative path from coordination repo
+#     branch_prefix: feat/      # git branch naming
+#   frontend:
+#     path: ../frontend
+#     branch_prefix: feat/
+# contracts_dir: openspec/contracts

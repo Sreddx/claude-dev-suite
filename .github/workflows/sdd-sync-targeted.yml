@@ -1,0 +1,167 @@
+# Targeted SDD Sync — for syncing specific repos with full topology control.
+#
+# Usage:
+#   1. Go to Actions tab in claude-dev-suit repo
+#   2. Select "SDD Sync (Targeted)"
+#   3. Click "Run workflow"
+#   4. Pick the repo type (topology) and enter the repo name(s)
+#
+# Or via CLI:
+#   gh workflow run sdd-sync-targeted.yml \
+#     -f repos="repo-name" \
+#     -f repo_type="frontend" \
+#     -f dry_run="false"
+#
+#   gh workflow run sdd-sync-targeted.yml \
+#     -f repos="repo-name" \
+#     -f repo_type="coordination" \
+#     -f target_branch="develop" \
+#     -f dry_run="false"
+#
+name: SDD Sync (Targeted)
+
+on:
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Comma-separated repo names to sync (without org prefix). Use "all" for all org repos.'
+        required: true
+        type: string
+      repo_type:
+        description: |
+          Repo topology — controls which agents are installed AND which profiles are applied.
+          coordination        → all 14 agents | baseline only
+          monorepo            → all 14 agents | frontend + backend-api profiles
+          frontend            → orchestrator + frontend set | frontend profile
+          backend             → orchestrator + backend set  | backend-api profile
+          brownfield-frontend → orchestrator + frontend set | frontend + brownfield profiles
+          brownfield-backend  → orchestrator + backend set  | backend-api + brownfield profiles
+          standalone          → all 14 agents | baseline only
+        required: true
+        default: 'standalone'
+        type: choice
+        options:
+          - 'standalone'
+          - 'coordination'
+          - 'monorepo'
+          - 'frontend'
+          - 'backend'
+          - 'brownfield-frontend'
+          - 'brownfield-backend'
+      dry_run:
+        description: 'Preview changes without applying'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      target_branch:
+        description: 'Target base branch for the PR in each repo (leave empty to use each repo default branch)'
+        required: false
+        default: ''
+        type: string
+      exclude:
+        description: 'Comma-separated repo names to exclude (only used when repos=all)'
+        required: false
+        default: 'claude-dev-suit,.github'
+        type: string
+
+jobs:
+  resolve-repos:
+    name: Resolve target repos
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.resolve.outputs.matrix }}
+    steps:
+      - name: Resolve repo list
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.ORG_PAT }}
+          REPOS_INPUT: ${{ inputs.repos }}
+          EXCLUDE_INPUT: ${{ inputs.exclude }}
+        run: |
+          if [ "$REPOS_INPUT" == "all" ]; then
+            # Fetch all org repos, exclude specified ones
+            IFS=',' read -ra EXCLUDES <<< "$EXCLUDE_INPUT"
+            repos=$(gh repo list Sreddx --json name -q '.[].name' --limit 500)
+            filtered=""
+            for repo in $repos; do
+              skip=false
+              for exc in "${EXCLUDES[@]}"; do
+                exc=$(echo "$exc" | xargs)
+                if [ "$repo" == "$exc" ]; then
+                  skip=true
+                  break
+                fi
+              done
+              if [ "$skip" == "false" ]; then
+                if [ -n "$filtered" ]; then
+                  filtered="$filtered,\"$repo\""
+                else
+                  filtered="\"$repo\""
+                fi
+              fi
+            done
+            echo "matrix={\"repo\":[$filtered]}" >> $GITHUB_OUTPUT
+          else
+            # Parse comma-separated input
+            IFS=',' read -ra REPOS <<< "$REPOS_INPUT"
+            json=""
+            for repo in "${REPOS[@]}"; do
+              repo=$(echo "$repo" | xargs)
+              if [ -n "$json" ]; then
+                json="$json,\"$repo\""
+              else
+                json="\"$repo\""
+              fi
+            done
+            echo "matrix={\"repo\":[$json]}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Show targets
+        run: |
+          echo "Target repos: ${{ steps.resolve.outputs.matrix }}"
+          echo "Repo type: ${{ inputs.repo_type }}"
+          echo "Dry run: ${{ inputs.dry_run }}"
+
+  sync:
+    name: Sync ${{ matrix.repo }} (${{ inputs.repo_type }})
+    needs: resolve-repos
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      matrix: ${{ fromJson(needs.resolve-repos.outputs.matrix) }}
+      fail-fast: false
+      max-parallel: 5
+
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: Sreddx/${{ matrix.repo }}
+          token: ${{ secrets.ORG_PAT }}
+          ref: ${{ inputs.target_branch }}
+
+      - name: Run Rojas SDD Cycle
+        id: sdd
+        uses: Sreddx/claude-dev-suit@main
+        with:
+          repo_type: ${{ inputs.repo_type }}
+          dry_run: ${{ inputs.dry_run }}
+          github_token: ${{ secrets.ORG_PAT }}
+          pr_enabled: 'true'
+          target_branch: ${{ inputs.target_branch }}
+
+      - name: Report result
+        if: always()
+        run: |
+          echo "## ${{ matrix.repo }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Repo type: ${{ inputs.repo_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Dry run: ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.sdd.outputs.pr_url }}" ]; then
+            echo "- PR: ${{ steps.sdd.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
+          fi

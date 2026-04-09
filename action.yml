@@ -1,0 +1,607 @@
+name: 'Rojas SDD Cycle'
+description: 'Install and sync the Rojas Spec-Driven Development standard across all AI coding tools'
+branding:
+  icon: 'layers'
+  color: 'blue'
+
+inputs:
+  install_mode:
+    description: 'Installation mode: baseline (default) or profile'
+    default: 'baseline'
+  repo_type:
+    description: |
+      Repo topology shortcut — auto-selects profiles AND repo_role (preferred over manual selection):
+        frontend            → profile: frontend      | agents: orchestrator + frontend set
+        backend             → profile: backend-api   | agents: orchestrator + backend set
+        monorepo            → profiles: frontend + backend-api | agents: all 14
+        brownfield-frontend → profiles: frontend + brownfield  | agents: orchestrator + frontend set
+        brownfield-backend  → profiles: backend-api + brownfield | agents: orchestrator + backend set
+        coordination        → baseline only (no profile)         | agents: all 14
+      Ignored when profile or repo_role is explicitly set.
+    default: ''
+  profile:
+    description: |
+      Explicit profile override (use repo_type for the recommended entry point).
+      Options: frontend, backend-api, brownfield, high-risk (empty = use repo_type or baseline only)
+    default: ''
+  airis_gateway_url:
+    description: 'AIRIS MCP Gateway endpoint URL (used by local-packs bootstrap only, not installed to repo by baseline sync)'
+    default: 'http://localhost:9400/sse'
+  context7_enabled:
+    description: 'Include context7 in MCP configurations (local-packs only)'
+    default: 'true'
+  airis_catalog_servers:
+    description: 'AIRIS catalog servers to make discoverable (all, or comma-separated list)'
+    default: 'all'
+  tools:
+    description: 'Comma-separated tools to configure (auto-detect if empty): claude-code,cursor,copilot,codex,opencode'
+    default: ''
+  dry_run:
+    description: 'Preview changes without applying them'
+    default: 'false'
+  version:
+    description: 'SDD cycle version for commit tracking'
+    default: ''
+  skills_dir:
+    description: 'Directory to install universal skills'
+    default: '.claude/skills'
+  github_token:
+    description: 'GitHub token for creating PRs and pushing branches (must have contents:write and pull-requests:write)'
+    required: false
+    default: ''
+  pr_enabled:
+    description: 'Create a PR instead of pushing directly (required for repos with branch protection on main/dev)'
+    default: 'true'
+  pr_prefix:
+    description: 'Branch name prefix for SDD sync PRs'
+    default: 'sdd-sync'
+  target_branch:
+    description: 'Target base branch for the PR (defaults to the repo default branch)'
+    default: ''
+  agent_suite:
+    description: 'Install the SDD Dev Suite Claude Code agents (true/false). Non-destructive: never overwrites agents without the managed marker; managed agents may be updated when the agent suite version changes.'
+    default: 'true'
+  agent_suite_version:
+    description: 'SDD Dev Suite agent version for update tracking (semver)'
+    default: '1.0.0'
+  repo_role:
+    description: |
+      Role of this repo — controls which agents are installed:
+        coordination → all 14 agents (hub delegates to sub-repos; needs full agent awareness)
+        monorepo     → all 14 agents (orchestrates all domains internally)
+        frontend     → orchestrator + planner + researcher + frontend + tester-front + github-ops + validator
+        backend      → orchestrator + planner + researcher + backend + database + tester-back + github-ops + validator
+        standalone   → all 14 agents (default — single self-contained repo)
+      Auto-derived from repo_type when not explicitly set.
+    default: ''
+
+outputs:
+  pr_url:
+    description: 'URL of the created pull request (empty if no PR was created)'
+    value: ${{ steps.deliver.outputs.pr_url }}
+  changes:
+    description: 'Whether any changes were detected and committed (true/false)'
+    value: ${{ steps.deliver.outputs.changes }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Detect tools in repository
+      id: detect
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.tools }}" ]; then
+          echo "tools=${{ inputs.tools }}" >> $GITHUB_OUTPUT
+        else
+          bash ${{ github.action_path }}/installer/detect-tools.sh >> $GITHUB_OUTPUT
+        fi
+
+    - name: Resolve effective profiles
+      id: resolve-profiles
+      shell: bash
+      run: |
+        REPO_TYPE="${{ inputs.repo_type }}"
+        PROFILE_INPUT="${{ inputs.profile }}"
+
+        if [ -n "$REPO_TYPE" ] && [ -z "$PROFILE_INPUT" ]; then
+          case "$REPO_TYPE" in
+            frontend)             PROFILES="frontend" ;;
+            backend)              PROFILES="backend-api" ;;
+            monorepo)             PROFILES="frontend backend-api" ;;
+            brownfield-frontend)  PROFILES="frontend brownfield" ;;
+            brownfield-backend)   PROFILES="backend-api brownfield" ;;
+            coordination)         PROFILES="" ;;
+            *)
+              echo "::warning::Unknown repo_type '$REPO_TYPE' — using baseline only"
+              PROFILES=""
+              ;;
+          esac
+          if [ -n "$PROFILES" ]; then
+            echo "repo_type '$REPO_TYPE' → profiles: $PROFILES"
+          else
+            echo "repo_type '$REPO_TYPE' → baseline only (no profile)"
+          fi
+        elif [ -n "$PROFILE_INPUT" ]; then
+          PROFILES="$PROFILE_INPUT"
+          echo "Explicit profile set: $PROFILES"
+        else
+          PROFILES=""
+          echo "No repo_type or profile — baseline only"
+        fi
+
+        echo "effective_profiles=$PROFILES" >> $GITHUB_OUTPUT
+
+    - name: Resolve effective repo role
+      id: resolve-role
+      shell: bash
+      run: |
+        ROLE_INPUT="${{ inputs.repo_role }}"
+        REPO_TYPE="${{ inputs.repo_type }}"
+
+        if [ -n "$ROLE_INPUT" ]; then
+          ROLE="$ROLE_INPUT"
+          echo "Explicit repo_role set: $ROLE"
+        elif [ -n "$REPO_TYPE" ]; then
+          # Auto-derive repo_role from repo_type
+          case "$REPO_TYPE" in
+            coordination)         ROLE="coordination" ;;
+            monorepo)             ROLE="monorepo" ;;
+            frontend | brownfield-frontend) ROLE="frontend" ;;
+            backend  | brownfield-backend)  ROLE="backend" ;;
+            *)                    ROLE="standalone" ;;
+          esac
+          echo "repo_type '$REPO_TYPE' → repo_role: $ROLE (auto-derived)"
+        else
+          ROLE="standalone"
+          echo "No repo_type or repo_role — defaulting to: standalone"
+        fi
+
+        echo "effective_role=$ROLE" >> $GITHUB_OUTPUT
+
+    - name: Merge AGENTS.md
+      shell: bash
+      run: |
+        node ${{ github.action_path }}/installer/merge-agents.js \
+          --template "${{ github.action_path }}/templates/AGENTS.md" \
+          --target "./AGENTS.md" \
+          --dry-run "${{ inputs.dry_run }}"
+
+    - name: Sync MCP configs for detected tools
+      shell: bash
+      run: |
+        IFS=',' read -ra TOOLS <<< "${{ steps.detect.outputs.tools }}"
+        for tool in "${TOOLS[@]}"; do
+          tool=$(echo "$tool" | xargs)
+          bash ${{ github.action_path }}/installer/install.sh \
+            --tool "$tool" \
+            --airis-url "${{ inputs.airis_gateway_url }}" \
+            --context7 "${{ inputs.context7_enabled }}" \
+            --airis-catalog "${{ inputs.airis_catalog_servers }}" \
+            --dry-run "${{ inputs.dry_run }}"
+        done
+
+    - name: Init or merge OpenSpec
+      shell: bash
+      run: |
+        if [ ! -d "openspec" ]; then
+          echo "No openspec directory found — initializing from template"
+          if [ "${{ inputs.dry_run }}" != "true" ]; then
+            mkdir -p openspec/specs openspec/changes
+            cp "${{ github.action_path }}/templates/openspec/config.yaml" openspec/config.yaml
+            echo "# OpenSpec" > openspec/README.md
+            echo "Specs live in \`openspec/specs/\`. Changes live in \`openspec/changes/\`." >> openspec/README.md
+            echo "OpenSpec initialized"
+          else
+            echo "[DRY RUN] Would create: openspec/specs, openspec/changes, openspec/config.yaml, openspec/README.md"
+          fi
+        else
+          echo "OpenSpec already initialized — merging config (copy-if-missing)"
+          if [ "${{ inputs.dry_run }}" != "true" ]; then
+            mkdir -p openspec/specs openspec/changes
+            cp -n "${{ github.action_path }}/templates/openspec/config.yaml" openspec/config.yaml 2>/dev/null || true
+          fi
+        fi
+
+    - name: Sync schemas and templates
+      shell: bash
+      run: |
+        # Schemas — single source of truth for formats
+        SCHEMAS_SRC="${{ github.action_path }}/schemas"
+        SCHEMAS_TARGET="./schemas"
+        if [ -d "$SCHEMAS_SRC" ]; then
+          mkdir -p "$SCHEMAS_TARGET"
+          for schema in "$SCHEMAS_SRC"/*.md; do
+            [ -f "$schema" ] || continue
+            BASENAME=$(basename "$schema")
+            TARGET_FILE="$SCHEMAS_TARGET/$BASENAME"
+            if [ ! -f "$TARGET_FILE" ]; then
+              if [ "${{ inputs.dry_run }}" == "true" ]; then
+                echo "[DRY RUN] Would install schema: $BASENAME"
+              else
+                cp "$schema" "$TARGET_FILE"
+                echo "Installed schema: $BASENAME"
+              fi
+            else
+              echo "Schema exists, skipping: $BASENAME"
+            fi
+          done
+        fi
+
+        # OpenSpec templates — progress.md, handoff.md
+        TMPL_SRC="${{ github.action_path }}/templates/openspec"
+        TMPL_TARGET="./templates/openspec"
+        if [ -d "$TMPL_SRC" ]; then
+          mkdir -p "$TMPL_TARGET"
+          for tmpl in "$TMPL_SRC"/*.md; do
+            [ -f "$tmpl" ] || continue
+            BASENAME=$(basename "$tmpl")
+            TARGET_FILE="$TMPL_TARGET/$BASENAME"
+            if [ ! -f "$TARGET_FILE" ]; then
+              if [ "${{ inputs.dry_run }}" == "true" ]; then
+                echo "[DRY RUN] Would install template: $BASENAME"
+              else
+                cp "$tmpl" "$TARGET_FILE"
+                echo "Installed template: $BASENAME"
+              fi
+            fi
+          done
+        fi
+
+        # Scripts are synced by the "Install SDD commands and scripts" step below
+
+    - name: Init .claude directory
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry_run }}" == "true" ]; then
+          if [ ! -d ".claude" ]; then
+            echo "[DRY RUN] Would create .claude/ directory structure"
+          fi
+          exit 0
+        fi
+        if [ ! -d ".claude" ]; then
+          echo "No .claude directory found — initializing"
+          mkdir -p .claude/skills .claude/commands .claude/agents
+          echo "# .claude" > .claude/README.md
+          echo "Claude Code configuration for this repo. Skills live in \`.claude/skills/\`, custom commands in \`.claude/commands/\`, agents in \`.claude/agents/\`." >> .claude/README.md
+          echo ".claude directory initialized"
+        else
+          echo ".claude directory already exists — ensuring subdirectories"
+          mkdir -p .claude/skills .claude/commands .claude/agents
+        fi
+
+    - name: Install SDD commands and scripts
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry_run }}" == "true" ]; then
+          echo "[DRY RUN] Would install .claude/commands/sdd.md"
+          echo "[DRY RUN] Would install scripts/sdd-preflight.sh"
+          echo "[DRY RUN] Would install scripts/sdd-session-report.sh"
+          exit 0
+        fi
+
+        # /sdd entrypoint command — version-checked (same pattern as skills)
+        SRC_CMD="${{ github.action_path }}/.claude/commands/sdd.md"
+        TGT_CMD=".claude/commands/sdd.md"
+        mkdir -p .claude/commands
+        if [ -f "$TGT_CMD" ]; then
+          src_ver=$(grep '^version:' "$SRC_CMD" | head -1 | awk '{print $2}')
+          tgt_ver=$(grep '^version:' "$TGT_CMD" | head -1 | awk '{print $2}')
+          if [ -n "$src_ver" ] && [ -n "$tgt_ver" ]; then
+            newer=$(node -e "
+              const [a,b]=process.argv.slice(-2).map(v=>v.split('.').map(Number));
+              let r=0; for(let i=0;i<3;i++){if(a[i]>b[i]){r=1;break}if(a[i]<b[i]){r=-1;break}}
+              console.log(r>0?'newer':'same-or-older');
+            " "$src_ver" "$tgt_ver")
+            if [ "$newer" == "newer" ]; then
+              cp "$SRC_CMD" "$TGT_CMD"
+              echo "Updated .claude/commands/sdd.md ($tgt_ver -> $src_ver)"
+            else
+              echo "Skipping .claude/commands/sdd.md (up to date: $tgt_ver)"
+            fi
+          else
+            cp "$SRC_CMD" "$TGT_CMD"
+            echo "Installed .claude/commands/sdd.md (no version found, overwriting)"
+          fi
+        else
+          cp "$SRC_CMD" "$TGT_CMD"
+          echo "Installed .claude/commands/sdd.md"
+        fi
+
+        # SDD scripts — always sync (deterministic utility scripts)
+        mkdir -p scripts
+        cp "${{ github.action_path }}/scripts/sdd-preflight.sh" "scripts/sdd-preflight.sh"
+        chmod +x "scripts/sdd-preflight.sh"
+        echo "Installed scripts/sdd-preflight.sh"
+
+        cp "${{ github.action_path }}/scripts/sdd-session-report.sh" "scripts/sdd-session-report.sh"
+        chmod +x "scripts/sdd-session-report.sh"
+        echo "Installed scripts/sdd-session-report.sh"
+
+    - name: Install or update skills
+      shell: bash
+      run: |
+        SKILLS_DIR="${{ inputs.skills_dir }}"
+        if [ "${{ inputs.dry_run }}" == "true" ]; then
+          echo "[DRY RUN] Would install skills to $SKILLS_DIR"
+          ls ${{ github.action_path }}/skills/
+          exit 0
+        fi
+        mkdir -p "$SKILLS_DIR"
+        for skill_dir in ${{ github.action_path }}/skills/rojas-*/; do
+          skill_name=$(basename "$skill_dir")
+          src="$skill_dir/SKILL.md"
+          target_dir="$SKILLS_DIR/$skill_name"
+          target="$target_dir/SKILL.md"
+          mkdir -p "$target_dir"
+          cp "$src" "$target"
+          echo "Installed $skill_name (force override)"
+        done
+
+    - name: Install community skills
+      shell: bash
+      run: |
+        SKILLS_DIR="${{ inputs.skills_dir }}"
+        COMMUNITY_SRC="${{ github.action_path }}/skills/community"
+        if [ "${{ inputs.dry_run }}" == "true" ]; then
+          echo "[DRY RUN] Would install community skills to $SKILLS_DIR"
+          ls "$COMMUNITY_SRC/"
+          exit 0
+        fi
+        if [ ! -d "$COMMUNITY_SRC" ]; then
+          echo "No community skills directory found — skipping"
+          exit 0
+        fi
+        mkdir -p "$SKILLS_DIR"
+        for skill_dir in "$COMMUNITY_SRC"/*/; do
+          skill_name=$(basename "$skill_dir")
+          src="$skill_dir/SKILL.md"
+          target_dir="$SKILLS_DIR/$skill_name"
+          target="$target_dir/SKILL.md"
+          if [ -f "$src" ]; then
+            mkdir -p "$target_dir"
+            cp "$src" "$target"
+            echo "Installed community skill: $skill_name (force override)"
+          fi
+        done
+
+    - name: Install or update SDD Dev Suite agents
+      shell: bash
+      run: |
+        if [ "${{ inputs.agent_suite }}" != "true" ]; then
+          echo "Agent suite installation disabled — skipping"
+          exit 0
+        fi
+        AGENTS_SOURCE="${{ github.action_path }}/agents/claude"
+        AGENTS_TARGET=".claude/agents"
+        SUITE_VERSION="${{ inputs.agent_suite_version }}"
+
+        if [ ! -d "$AGENTS_SOURCE" ]; then
+          echo "::warning::Agent suite source not found at $AGENTS_SOURCE — skipping"
+          exit 0
+        fi
+
+        node ${{ github.action_path }}/installer/merge-claude-agents.js \
+          --source "$AGENTS_SOURCE" \
+          --target "$AGENTS_TARGET" \
+          --version "$SUITE_VERSION" \
+          --role "${{ steps.resolve-role.outputs.effective_role }}" \
+          --dry-run "${{ inputs.dry_run }}"
+
+    - name: Apply repo profile (if selected)
+      shell: bash
+      run: |
+        EFFECTIVE_PROFILES="${{ steps.resolve-profiles.outputs.effective_profiles }}"
+        if [ -z "$EFFECTIVE_PROFILES" ]; then
+          echo "No profile selected — baseline only"
+          exit 0
+        fi
+
+        apply_profile() {
+          local PROFILE="$1"
+          local PROFILE_FILE="${{ github.action_path }}/profiles/${PROFILE}.md"
+          if [ ! -f "$PROFILE_FILE" ]; then
+            echo "::error::Unknown profile '$PROFILE'. Available: frontend, backend-api, brownfield, high-risk"
+            exit 1
+          fi
+          echo "Applying profile: $PROFILE"
+          SECTION_BLOCK=$(node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('${PROFILE_FILE}', 'utf8');
+            const match = content.match(/\`\`\`markdown\n([\s\S]*?)\n\`\`\`/);
+            if (match) process.stdout.write(match[1]);
+          ")
+          if [ -n "\$SECTION_BLOCK" ]; then
+            TEMP_TEMPLATE=$(mktemp /tmp/profile-agents-XXXXXX.md)
+            printf '%s\n' "\$SECTION_BLOCK" > "\$TEMP_TEMPLATE"
+            if [ "${{ inputs.dry_run }}" != "true" ]; then
+              node ${{ github.action_path }}/installer/merge-agents.js \
+                --template "\$TEMP_TEMPLATE" \
+                --target "./AGENTS.md" \
+                --dry-run "false"
+            else
+              echo "[DRY RUN] Would merge profile section from: $PROFILE"
+              node ${{ github.action_path }}/installer/merge-agents.js \
+                --template "\$TEMP_TEMPLATE" \
+                --target "./AGENTS.md" \
+                --dry-run "true"
+            fi
+            rm -f "\$TEMP_TEMPLATE"
+          else
+            echo "No AGENTS.md section block found in profile $PROFILE — skipping section merge"
+          fi
+        }
+
+        for PROFILE in $EFFECTIVE_PROFILES; do
+          apply_profile "$PROFILE"
+        done
+
+    - name: Create compatibility entrypoints
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry_run }}" == "true" ]; then
+          echo "[DRY RUN] Would create compatibility entrypoints (CLAUDE.md, .github/copilot-instructions.md)"
+          exit 0
+        fi
+        # CLAUDE.md — real file pointing readers to AGENTS.md (not a symlink: tools read via GitHub API won't dereference symlinks)
+        if [ ! -f "CLAUDE.md" ] && [ -f "AGENTS.md" ]; then
+          printf '%s\n' \
+            '<!-- This file is managed by claude-dev-suit. Do not edit manually. -->' \
+            '<!-- See AGENTS.md for the full agent and AI tooling guidance. -->' \
+            '' \
+            '> **Claude Code users:** The primary guidance for this repo lives in [`AGENTS.md`](./AGENTS.md).' \
+            '> All SDD workflow rules, skill references, MCP integration notes, and conventions are defined there.' \
+            > CLAUDE.md
+          echo "Created CLAUDE.md (real file, not symlink)"
+        fi
+        # .github/copilot-instructions.md — real file; GitHub Copilot reads this via blob API, symlinks are not dereferenced
+        if [ ! -f ".github/copilot-instructions.md" ] && [ -f "AGENTS.md" ]; then
+          mkdir -p .github
+          printf '%s\n' \
+            '<!-- This file is managed by claude-dev-suit. Do not edit manually. -->' \
+            '<!-- See AGENTS.md for the full agent and AI tooling guidance. -->' \
+            '' \
+            '> **GitHub Copilot users:** The primary guidance for this repo lives in [`AGENTS.md`](../AGENTS.md).' \
+            '> All SDD workflow rules, skill references, MCP integration notes, and conventions are defined there.' \
+            > .github/copilot-instructions.md
+          echo "Created .github/copilot-instructions.md (real file, not symlink)"
+        fi
+
+    - name: Commit and deliver changes
+      if: inputs.dry_run != 'true'
+      id: deliver
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        PR_ENABLED: ${{ inputs.pr_enabled }}
+        PR_PREFIX: ${{ inputs.pr_prefix }}
+        TARGET_BRANCH: ${{ inputs.target_branch }}
+        DETECTED_TOOLS: ${{ steps.detect.outputs.tools }}
+        AGENT_SUITE: ${{ inputs.agent_suite }}
+        REPO_TYPE: ${{ inputs.repo_type }}
+        EFFECTIVE_PROFILES: ${{ steps.resolve-profiles.outputs.effective_profiles }}
+      run: |
+        git config user.name "rojas-sdd-bot"
+        git config user.email "sdd@rojas.cloud"
+        VERSION="${{ inputs.version }}"
+        if [ -z "$VERSION" ]; then
+          VERSION=$(date +%Y%m%d)
+        fi
+
+        git add -A
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+          echo "changes=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "changes=true" >> $GITHUB_OUTPUT
+
+        if [ "$PR_ENABLED" == "true" ]; then
+          # Validate that github_token is provided for PR flow
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "::error::github_token input is required when pr_enabled=true. The token must have contents:write and pull-requests:write scopes."
+            exit 1
+          fi
+
+          # --- PR-based flow (for repos with branch protection) ---
+          # Use explicit target_branch if provided, otherwise use current branch
+          if [ -n "$TARGET_BRANCH" ]; then
+            BASE_BRANCH="$TARGET_BRANCH"
+            echo "Using explicit target branch: $BASE_BRANCH"
+          else
+            BASE_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          fi
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          BRANCH_NAME="${PR_PREFIX}/v${VERSION}-${TIMESTAMP}"
+
+          git checkout -b "$BRANCH_NAME"
+          git commit -m "chore(sdd): sync claude-dev-suit v${VERSION}"
+          git push -u origin "$BRANCH_NAME"
+
+          # Ensure the sdd-sync label exists in the target repo
+          gh label create "sdd-sync" \
+            --description "Automated SDD cycle sync from claude-dev-suit" \
+            --color "1D76DB" 2>/dev/null || true
+
+          # Close any stale open SDD sync PRs targeting the same base branch
+          STALE_PRS=$(gh pr list \
+            --base "$BASE_BRANCH" \
+            --state open \
+            --label "sdd-sync" \
+            --json number \
+            --jq '.[].number' 2>/dev/null || true)
+
+          for pr_num in $STALE_PRS; do
+            echo "Closing stale SDD sync PR #${pr_num}"
+            gh pr close "$pr_num" \
+              --comment "Superseded by newer SDD sync (v${VERSION})" \
+              --delete-branch 2>/dev/null || true
+          done
+
+          # Create new PR
+          AGENT_LINE=""
+          if [ "$AGENT_SUITE" == "true" ]; then
+            AGENT_LINE="- **Claude Code agents** installed or updated in \`.claude/agents/\` (force override)"
+          fi
+
+          REPO_TYPE_LINE=""
+          if [ -n "$REPO_TYPE" ]; then
+            REPO_TYPE_LINE="**Repo type:** \`${REPO_TYPE}\`"
+          fi
+
+          PROFILES_LINE=""
+          if [ -n "$EFFECTIVE_PROFILES" ]; then
+            PROFILES_LIST=$(echo "$EFFECTIVE_PROFILES" | tr ' ' ', ')
+            PROFILES_LINE="**Profiles applied:** \`${PROFILES_LIST}\`"
+          else
+            PROFILES_LINE="**Profiles applied:** baseline only"
+          fi
+
+          {
+            echo "## SDD Cycle Sync"
+            echo ""
+            echo "Automated sync from \`claude-dev-suit\`."
+            echo ""
+            echo "### What changed"
+            echo "- **AGENTS.md** sections merged (non-destructive, versioned)"
+            echo "- **MCP configs** deep-merged for detected tools"
+            echo "- **Skills** installed in \`.claude/skills/\` (force override — rojas:* and community skills)"
+            echo "- **OpenSpec** initialized or config merged"
+            echo "- **Compatibility entrypoints** created if missing"
+            echo "- **Schemas** installed in \`schemas/\` (copy-if-missing — task-format, approval-gates, spec-frontmatter)"
+            echo "- **Templates** installed in \`templates/openspec/\` (copy-if-missing — progress.md, handoff.md)"
+            if [ -n "$AGENT_LINE" ]; then
+              echo "$AGENT_LINE"
+            fi
+            echo ""
+            echo "### Details"
+            echo "**Tools configured:** \`${DETECTED_TOOLS}\`"
+            if [ -n "$REPO_TYPE_LINE" ]; then echo "$REPO_TYPE_LINE"; fi
+            echo "$PROFILES_LINE"
+            echo "**Version:** \`${VERSION}\`"
+            echo ""
+            echo "---"
+            echo "*This PR was created automatically by [claude-dev-suit](https://github.com/Sreddx/claude-dev-suit). Review and merge when ready.*"
+          } > /tmp/sdd-pr-body.md
+
+          PR_URL=$(gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$BRANCH_NAME" \
+            --title "chore(sdd): sync claude-dev-suit v${VERSION}" \
+            --label "sdd-sync" \
+            --body-file /tmp/sdd-pr-body.md)
+
+          echo "pr_url=${PR_URL}" >> $GITHUB_OUTPUT
+          echo "Created PR: ${PR_URL}"
+
+        else
+          # --- Direct push flow (for ruleset workflow / non-protected branches) ---
+          git commit -m "chore(sdd): sync claude-dev-suit v${VERSION}"
+          git push
+          echo "Pushed changes directly to $(git rev-parse --abbrev-ref HEAD)"
+        fi

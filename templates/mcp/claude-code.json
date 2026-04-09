@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "airis-mcp-gateway": {
+      "type": "sse",
+      "url": "AIRIS_GATEWAY_URL",
+      "note": "Dynamic MCP: 60+ tools via 3 meta-tools (airis-find, airis-schema, airis-exec). All catalog servers auto-enable on first use."
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"],
+      "note": "Up-to-date library documentation. Use resolve-library-id then query-docs."
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/mcp-server-playwright@latest"],
+      "note": "Browser testing for frontend implementations. Navigate, snapshot, click, fill forms."
+    },
+    "magic": {
+      "command": "npx",
+      "args": ["-y", "@21st-dev/magic-mcp@latest"],
+      "note": "AI-powered UI component generation. Respects project code style."
+    },
+    "morphllm": {
+      "command": "npx",
+      "args": ["-y", "@morph-llm/morph-mcp@latest"],
+      "env": {
+        "MORPH_API_KEY": "",
+        "ENABLED_TOOLS": "edit_file,warpgrep_codebase_search"
+      },
+      "note": "FastApply (10x edit speed) + WarpGrep (context-clean code search)."
+    }
+  }
+}
