@@ -1,0 +1,44 @@
+{
+  "name": "claude-dev-suite",
+  "version": "1.0.0",
+  "description": "Spec-Driven Development standard — 14 Claude Code agents, OpenSpec workflow, and multi-tool baseline for AI-assisted engineering",
+  "bin": {
+    "claude-dev-suite": "./bin/cli.js"
+  },
+  "keywords": [
+    "sdd",
+    "spec-driven-development",
+    "claude-code",
+    "ai-agents",
+    "openspec",
+    "cursor",
+    "copilot",
+    "codex",
+    "opencode"
+  ],
+  "author": "Sreddx",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sreddx/claude-dev-suite"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin/",
+    "install.sh",
+    "installer/",
+    "agents/",
+    "skills/",
+    "templates/",
+    "schemas/",
+    "profiles/",
+    "scripts/",
+    ".claude/",
+    ".opencode/",
+    ".github/skills/",
+    ".github/prompts/",
+    "openspec/"
+  ]
+}

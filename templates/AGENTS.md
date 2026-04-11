@@ -89,11 +89,11 @@ These skills wrap OpenSpec commands with sub-agent orchestration and MCP integra
 
 | Skill | Wraps | MCP Dependencies | Purpose |
 |---|---|---|---|
-| `rojas:explore` | `opsx:explore` | context7, tavily, serena | Enriched exploration + brownfield project memory |
-| `rojas:research` | *(standalone)* | tavily, context7, mindbase, serena | Deep research with persistence |
+| `rojas:explore` | `opsx:explore` | context7, serena | Enriched exploration + brownfield project memory (web: WebSearch native) |
+| `rojas:research` | *(standalone)* | context7, serena | Deep research with persistence (web: WebSearch native; state: file-based fallback) |
 | `rojas:propose` | `opsx:new`, `opsx:ff` | context7 | Spec creation with API validation |
 | `rojas:implement` | `opsx:apply` | airis-agent, context7, playwright, magic, morphllm | Parallel sub-agents + profile-based tooling |
-| `rojas:verify` | `opsx:verify` | mindbase | Isolated verification agent |
+| `rojas:verify` | `opsx:verify` | — | Isolated verification agent |
 | `rojas:orchestrate` | *(meta)* | airis-agent, serena | Task dependency analysis + parallel dispatch |
 | `rojas:kickstart` | `rojas:explore`, `rojas:propose` | — | Greenfield project bootstrap: PRD/backlog intake → spec decomposition → wave planning |
 
@@ -106,9 +106,8 @@ Layer 1 (`/opsx:*`) commands remain available and unmodified.
 ### Core Infrastructure
 - **AIRIS Gateway** — 60+ tools via Dynamic MCP (3 meta-tools). Use `airis-find` to discover, `airis-exec` to run. Servers auto-enable on first use from the full catalog.
 - **context7** — up-to-date library docs. Use `resolve-library-id` then `query-docs`.
-- **mindbase** — knowledge graph for persisting research findings across sessions.
 - **serena** — session state persistence for resuming interrupted work and brownfield project memory.
-- **tavily** — deep web search with summarization for research phases.
+- **WebSearch** — native tool for web research in all skills. No external MCP required.
 
 ### Implementation Tools
 - **Playwright** — browser-based testing for frontend implementations. Navigate, snapshot, click, fill forms, evaluate JS. Every frontend task requires Playwright verification.
@@ -119,7 +118,7 @@ Layer 1 (`/opsx:*`) commands remain available and unmodified.
 - Use AIRIS Dynamic MCP (3 meta-tools) instead of loading all 60+ tools
 - Each sub-agent should receive only its task's relevant specs and files
 - Query context7 only when the task involves a specific library
-- Persist research to mindbase to avoid redundant searches
+- Persist research to `openspec/changes/<current>/research.md` to avoid redundant searches (serena if available)
 - Use Morphllm WarpGrep instead of polluting main context with file reads
 <!-- /rojas:section:mcp-integration -->
 

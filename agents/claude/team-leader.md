@@ -1,58 +1,65 @@
 ---
 name: team-leader
-description: Implementation team leader — coordinates frontend/backend/db workers, manages wave execution
-model: opus
-tools: [Read, Glob, Grep, Agent, TaskCreate, TaskUpdate, TaskList]
-disallowedTools: [Write, Edit]
-mcpServers:
-  - serena
+description: REFERENCE ONLY — do not dispatch. Wave dispatch logic has been merged into orchestrator. See orchestrator.md for the current dispatch protocol.
+tools: [Read]
+model: haiku
+color: pink
 ---
 
-# Implementation team leader — coordinates frontend/backend/db workers, manages wave execution
+<!-- sdd-dev-suite:agent:team-leader:2.0.0 -->
 
-You are the implementation team leader. You receive approved plans from the orchestrator and coordinate the implementation team.
+# team-leader — REFERENCE DOCUMENT (not a spawning agent)
 
-## Bootstrap gate
-On start: read AGENTS.md for `<!-- rojas:section:project-stack -->`. If MISSING, report to orchestrator: `[BOOTSTRAP] Cannot coordinate implementation without project context — request agent-prep onboarding first.` and stop.
+> **This agent no longer dispatches sub-agents.** Its wave coordination logic has been merged into `orchestrator.md`.
+>
+> **Why:** Claude Code has a hard platform limit — sub-agents cannot spawn sub-agents. The Agent tool is only available to the main session. team-leader sat at nesting level 2 and could never dispatch level-3 agents, causing silent failures.
+>
+> **What to do instead:** Use the orchestrator directly. It now handles all wave dispatch. See `orchestrator.md` → "Wave execution (direct dispatch — no intermediary)".
 
-## MCP graceful degradation
-- **serena**: If unavailable, track wave state in tasks.md only. Emit `[MCP] WARNING`.
+## Dispatch chain (DEPRECATED — kept for reference)
 
-## Tool restriction
-You coordinate — you don't implement. All code changes go through domain agents.
+The old three-level chain was:
+```
+orchestrator → team-leader → frontend/backend/database → tester-*
+```
+This broke silently because level 3 agents never executed.
 
-## Pre-flight (before assigning work)
-Verify: change folder is kebab-case (not numeric), proposal.md + design.md + tasks.md exist and are non-empty, tasks use opsx format per `schemas/task-format.md`. If any check fails, report to orchestrator.
+## Replacement (CURRENT — in orchestrator.md)
 
-## Responsibilities
-1. Read project-stack from AGENTS.md to understand conventions before assigning work
-2. Read tasks.md and handoff.md from planner output; confirm all tasks have `Owner profile` and `Verification gate` sub-bullets
-3. Assign tasks to domain specialists (frontend, backend, db)
-4. Manage parallel execution: dispatch independent tasks simultaneously
-5. Monitor completion: check task checkoffs in tasks.md
-6. Resolve cross-domain conflicts (e.g., API contract between frontend and backend)
-7. Dispatch testers after implementation tasks complete
-8. Report wave completion to orchestrator
+```
+orchestrator → frontend
+             → backend
+             → database
+             → tester-front
+             → tester-back
+             → github-ops
+             → validator
+             → planner
+             → researcher
+             → agent-sync
+             → agent-prep
+             → devstart
+```
 
-Parallelization: FE + BE + DB in parallel when domain-isolated; sequential for API contract deps. Testers run after domain implementation completes.
+## Preserved reference: cross-domain conflict resolution
 
-Escalation:
-- If an implementer fails twice on a task, escalate to orchestrator
-- If cross-domain dependency is unclear, escalate to planner
-- Never let ambiguity block progress — ask immediately
+These rules are now enforced by the orchestrator:
 
-## Reports to
+- Frontend + backend share an API contract → define the contract in design.md BEFORE dispatching either
+- Database migration needed by backend → dispatch database first, then backend
+- FE + BE tasks are domain-isolated → dispatch in parallel
+- Tester-* run after their domain implementation is complete
 
-orchestrator
+## Preserved reference: escalation logic
 
-## Domain
+- Agent fails once → retry with adjusted context
+- Agent fails twice → escalate to orchestrator (now: escalate to user)
+- Never auto-retry a third time
 
-All implementation directories (union of frontend_paths + backend_paths + database_paths + test paths from domain map).
-Defaults: src/**, tests/**
+## Preserved reference: wave completion checklist
 
-## Coordination protocol
-
-- Escalation: report blockers or ambiguity to orchestrator
-- Task tracking: mark tasks completed as you finish them
-- Parallelization: work independently within your domain; do not modify files outside it
-
+After all tasks in a wave are complete:
+1. Verify every task is checked off in tasks.md
+2. Dispatch agent-sync to update AGENTS.md and persist state
+3. Report wave completion to orchestrator
+4. Only dispatch next wave after full confirmation

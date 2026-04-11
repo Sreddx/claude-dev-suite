@@ -3,7 +3,7 @@
  * merge-claude-agents.js — Claude Code agent installer.
  *
  * Installs .claude/agents/*.md from the SDD Dev Suite into a target repo.
- * Uses a version marker comment to track managed agents:
+ * Uses a version marker comment (appended after frontmatter) to track managed agents:
  *   <!-- sdd-dev-suite:agent:<name>:<version> -->
  *
  * Rules:
@@ -63,16 +63,19 @@ if (!sourceDir || !targetDir) {
 
 const allowedAgents = ROLE_AGENTS[role] ?? ROLE_AGENTS.standalone;
 
-const MARKER_RE = /^<!-- sdd-dev-suite:agent:([\w-]+):(\d+\.\d+\.\d+) -->/;
+// Marker may appear anywhere in the file (appended after frontmatter)
+const MARKER_RE = /<!-- sdd-dev-suite:agent:([\w-]+):(\d+\.\d+\.\d+) -->/;
 
 const SEMVER_STRICT = /^\d+\.\d+\.\d+$/;
 
 function addMarker(content, name, ver) {
-  return `<!-- sdd-dev-suite:agent:${name}:${ver} -->\n${content}`;
+  // Append after frontmatter so --- stays at line 1 (required by Claude Code's YAML parser)
+  const trimmed = content.trimEnd();
+  return `${trimmed}\n<!-- sdd-dev-suite:agent:${name}:${ver} -->\n`;
 }
 
 function stripMarker(content) {
-  return content.replace(/^<!-- sdd-dev-suite:agent:[\w-]+:\d+\.\d+\.\d+ -->\n/, '');
+  return content.replace(/\n<!-- sdd-dev-suite:agent:[\w-]+:\d+\.\d+\.\d+ -->\n?/, '\n');
 }
 
 // --- Main ---
@@ -121,10 +124,9 @@ for (const file of sourceFiles) {
     continue;
   }
 
-  // File exists — check for managed marker
+  // File exists — check for managed marker (may appear anywhere in the file)
   const tgtContent = fs.readFileSync(tgtPath, 'utf8');
-  const firstLine = tgtContent.split('\n')[0].trimEnd();
-  const match = firstLine.match(MARKER_RE);
+  const match = tgtContent.match(MARKER_RE);
 
   if (!match) {
     // No marker → user-created file, never overwrite

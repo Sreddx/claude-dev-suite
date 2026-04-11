@@ -14,57 +14,59 @@
                    ┌────────┴────────┐
                    │  ORCHESTRATOR   │  opus — read-only coordinator
                    │                 │  MCP: airis-mcp-gateway, serena
-                   └──┬───┬───┬─────┘
-          ┌───────────┤   │   ├───────────────┐
-          │           │   │   │               │
-   ┌──────┴──────┐  ┌─┴───┴──┐  ┌──────┐  ┌──┴───────┐
-   │  PLANNER    │  │  TEAM  │  │VALID-│  │ Support  │
-   │  opus       │  │ LEADER │  │ ATOR │  │ Agents   │
-   │  propose    │  │ opus   │  │sonnet│  │          │
-   └──────┬──────┘  └───┬────┘  └──────┘  │researcher│
-          │        ┌────┼────┐             │devstart  │
-   ┌──────┴──────┐ │    │    │             │agent-sync│
-   │ RESEARCHER  │ │    │    │             │agent-prep│
-   │ opus        │ │    │    │             └──────────┘
-   └─────────────┘ │    │    │
-                   │    │    │
-            ┌──────┘    │    └──────┐
-            │           │           │
-      ┌─────┴────┐ ┌────┴───┐ ┌────┴─────┐
-      │ FRONTEND │ │BACKEND │ │ DATABASE │
-      │ sonnet   │ │sonnet  │ │ sonnet   │
-      │ context7 │ │context7│ │ CLI-only │
-      └─────┬────┘ └────┬───┘ └──────────┘
-            │            │
-      ┌─────┴────┐ ┌─────┴────┐ ┌──────────┐
-      │TESTER-   │ │TESTER-   │ │GITHUB-OPS│
-      │FRONT     │ │BACK      │ │  haiku   │
-      │ haiku    │ │ haiku    │ └──────────┘
-      └──────────┘ └──────────┘
+                   └──┬──┬──┬──┬────┘
+         ┌────────────┘  │  │  └──────────────┐
+         │               │  │                 │
+  ┌──────┴──────┐  ┌─────┴──┴──┐  ┌──────┐  ┌┴─────────┐
+  │  PLANNER    │  │   IMPL    │  │VALID-│  │ Support  │
+  │  opus       │  │  AGENTS   │  │ ATOR │  │ Agents   │
+  │  propose    │  │ (direct)  │  │sonnet│  │          │
+  └──────┬──────┘  └──┬──┬──┬──┘  └──────┘  │researcher│
+         │             │  │  │               │devstart  │
+  ┌──────┴──────┐      │  │  │               │agent-sync│
+  │ RESEARCHER  │      │  │  │               │agent-prep│
+  │ opus        │      │  │  │               └──────────┘
+  └─────────────┘      │  │  │
+                       │  │  │
+                ┌──────┘  │  └──────┐
+                │         │         │
+         ┌──────┴──┐ ┌────┴───┐ ┌───┴──────┐
+         │FRONTEND │ │BACKEND │ │ DATABASE │
+         │ sonnet  │ │sonnet  │ │ sonnet   │
+         │ context7│ │context7│ │ CLI-only │
+         └─────┬───┘ └────┬───┘ └──────────┘
+               │           │
+         ┌─────┴───┐ ┌─────┴────┐ ┌──────────┐
+         │TESTER-  │ │TESTER-   │ │GITHUB-OPS│
+         │FRONT    │ │BACK      │ │  haiku   │
+         │ haiku   │ │ haiku    │ └──────────┘
+         └─────────┘ └──────────┘
 ```
+
+> **Platform constraint:** Sub-agents cannot spawn sub-agents in Claude Code. The Agent tool is only available to the main session (orchestrator). All implementation agents are dispatched directly by the orchestrator — there is no intermediary team-leader in the dispatch path.
 
 ---
 
 ## Agent Roster
 
-| Agent | Model | Reports to | MCP | Role |
-|-------|-------|------------|-----|------|
-| orchestrator | opus | user | airis-mcp-gateway, serena | Full cycle coordination, gates |
-| researcher | opus | orchestrator | airis-mcp-gateway, context7 | Multi-hop research |
-| planner | opus | orchestrator | airis-mcp-gateway, context7, serena | Spec decomposition |
-| team-leader | opus | orchestrator | serena | Wave dispatch (no write access) |
-| frontend | sonnet | team-leader | context7 | UI + GSAP + Playwright CLI |
-| backend | sonnet | team-leader | context7 | APIs + Postman collection sync |
-| database | sonnet | team-leader | — | 11-ORM detection, CLI-first migrations |
-| validator | sonnet | orchestrator | — | Read-only quality gate, /18 scorecard |
-| github-ops | haiku | team-leader | — | Branches, PRs, CI monitoring |
-| devstart | sonnet | orchestrator | context7 | Env bootstrap, MCP probe |
-| tester-front | haiku | team-leader | context7 | e2e (Playwright CLI) + component tests |
-| tester-back | haiku | team-leader | context7 | API + integration tests |
-| agent-sync | sonnet | orchestrator | serena | AGENTS.md state, multi-repo task list |
-| agent-prep | sonnet | orchestrator | airis-mcp-gateway, context7, serena | Codebase scan, domain map, project-stack |
+| Agent | Model | Color | Reports to | MCP | Role |
+|-------|-------|-------|------------|-----|------|
+| orchestrator | opus | purple | user | airis-mcp-gateway, serena | Full cycle coordination, direct wave dispatch, gates |
+| researcher | opus | blue | orchestrator | airis-mcp-gateway, context7 | Multi-hop research |
+| planner | opus | blue | orchestrator | airis-mcp-gateway, context7, serena, figma | Spec decomposition |
+| frontend | sonnet | green | orchestrator | context7, figma, playwright | UI + Playwright CLI, TDD |
+| backend | sonnet | green | orchestrator | context7 | APIs + Postman collection sync, TDD |
+| database | sonnet | green | orchestrator | — | 11-ORM detection, CLI-first migrations, TDD |
+| validator | sonnet | red | orchestrator | — | Read-only quality gate, /18 scorecard |
+| github-ops | haiku | cyan | orchestrator | — | Branches, PRs, CI monitoring |
+| devstart | sonnet | cyan | orchestrator | context7 | Env bootstrap, MCP probe |
+| tester-front | haiku | orange | orchestrator | context7, playwright | e2e (Playwright CLI) + component tests |
+| tester-back | haiku | orange | orchestrator | context7 | API + integration tests |
+| agent-sync | sonnet | pink | orchestrator | serena | AGENTS.md state, multi-repo task list |
+| agent-prep | sonnet | pink | orchestrator | airis-mcp-gateway, context7, serena | Codebase scan, domain map, project-stack |
+| team-leader | haiku | pink | — | — | **Reference doc only** — dispatch logic merged into orchestrator |
 
-**orchestrator and team-leader have `disallowedTools: [Write, Edit]`** — they coordinate but never touch code directly.
+**orchestrator has `disallowedTools: [Write, Edit]`** — it coordinates only. All implementation agents are dispatched directly from the orchestrator (no intermediary). Sub-agents cannot spawn sub-agents in Claude Code.
 
 ---
 
@@ -154,7 +156,7 @@ After bootstrap, all agents read the domain map from AGENTS.md to know which fil
   │  └─────────────────────────┘
   │     ❓ clarification questions may be asked at any point
   │
-  ├─ team-leader dispatches:
+  ├─ orchestrator dispatches directly (no intermediary):
   │    Wave 1  frontend + backend + database  (parallel, domain-isolated)
   │    Wave 2  tester-front + tester-back     (parallel)
   │    Wave 3  github-ops                     (PRs per domain)
@@ -359,6 +361,6 @@ server/**, src/services/**
 | Research something | `/sdd` → Mode 3 |
 | Fix a bug | `/sdd` → Mode 4 |
 | Set up a brownfield project | `/sdd` → Mode 5 (or auto-detected) |
-| Resume after session break | `/sdd` → orchestrator reads `progress.md` + `tasks.md`, reports wave status, continues |
+| Resume after session break | `/sdd` → orchestrator reads `tasks.md`, reports wave status, continues |
 | Check environment | Ask orchestrator to run `devstart` |
 | Override domain for an agent | Edit `## Domain` section in `.claude/agents/<agent>.md` |

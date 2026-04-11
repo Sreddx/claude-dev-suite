@@ -232,7 +232,7 @@ planner          decomposes into:
 │   proceeding" — approve or feedback  │
 └─────────────────────────────────────┘
 
-team-leader      reads tasks.md, assigns by domain
+orchestrator     dispatches implementation agents directly (no intermediary)
                    ❓ implementation agents may ask clarifications
 
   Wave 1:  frontend + backend + database  (parallel, domain-isolated)
@@ -369,7 +369,7 @@ For architectures with separate repos (e.g., `api` + `frontend`), all planning a
    | Role | Agents |
    |------|--------|
    | `standalone` | All 14 |
-   | `coordination` | orchestrator, planner, researcher, team-leader, validator, agent-prep, agent-sync, devstart |
+   | `coordination` | orchestrator, planner, researcher, validator, agent-prep, agent-sync, devstart |
    | `backend` | backend, database, tester-back, github-ops |
    | `frontend` | frontend, tester-front, github-ops |
 

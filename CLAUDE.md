@@ -15,9 +15,29 @@ A **centralized standard distribution system** for spec-driven development (SDD)
 - **Layer 3 — Repo Profiles**: Optional per-repo extensions (frontend, backend-api, brownfield, high-risk)
 - **Layer 4 — Local Extensions**: Developer-local MCP configs via `local-packs/` — **never committed to target repos**
 
-This repo itself is not built or compiled. There are no `npm install` / `make` steps. It is a distribution artifact used by a GitHub Action.
+This repo itself is not built or compiled. There are no `npm install` / `make` steps. It is a distribution artifact that can be installed via GitHub Action, shell one-liner, or npx.
+
+## OpenSpec Integration (Layer 1)
+
+The repo ships OpenSpec CLI skills and commands at multiple adapter levels:
+
+- **`.claude/commands/opsx/`** — Claude Code slash commands (`/opsx-apply`, `/opsx-archive`, `/opsx-explore`, `/opsx-propose`)
+- **`.claude/skills/openspec-*/`** — Claude Code skills for OpenSpec operations
+- **`.opencode/skills/openspec-*/`** — OpenCode skills (same content, different adapter)
+- **`.opencode/command/opsx-*.md`** — OpenCode commands
+- **`.github/skills/openspec-*/`** — GitHub-level skills (Copilot/Codex)
+- **`.github/prompts/opsx-*.prompt.md`** — GitHub Copilot prompt files
+- **`openspec/config.yaml`** — Root OpenSpec configuration
+
+These are brand-agnostic (use `openspec`/`opsx` terminology, not `rojas:*`) and wrap the upstream `@fission-ai/openspec` CLI.
 
 ## Key Operational Commands
+
+**Quick install (individual repo):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sreddx/claude-dev-suite/main/install.sh | bash
+npx claude-dev-suite install
+```
 
 **Sync to a target repo (dry run first):**
 ```bash

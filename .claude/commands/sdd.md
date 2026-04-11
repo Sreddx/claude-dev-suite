@@ -51,13 +51,13 @@ Present exactly these 5 modes:
 ### Mode 1: Plan and implement a new feature
 - **Input required:** PRD, backlog item, or direct requirement description
 - **Prerequisite:** Bootstrap complete
-- **Flow:** orchestrator → researcher (if unknowns) → planner → **PLAN APPROVAL GATE** → team-leader → implementation waves → tester waves → github-ops → validator → **MANUAL TEST GATE** → archive
-- **Agents involved:** orchestrator, researcher, planner, team-leader, frontend/backend/database, tester-front/tester-back, github-ops, validator
+- **Flow:** orchestrator → researcher (if unknowns) → planner → **PLAN APPROVAL GATE** → orchestrator dispatches implementation waves directly → tester waves → github-ops → validator → **MANUAL TEST GATE** → archive
+- **Agents involved:** orchestrator, researcher, planner, frontend/backend/database, tester-front/tester-back, github-ops, validator
 
 ### Mode 2: Implement from existing plan
 - **Input required:** Path to `openspec/changes/<change-name>/` with tasks.md
 - **Prerequisite:** Bootstrap complete + spec folder exists with tasks.md
-- **Flow:** orchestrator → team-leader → implementation waves → tester waves → github-ops → validator → **MANUAL TEST GATE** → archive
+- **Flow:** orchestrator dispatches implementation agents directly → tester waves → github-ops → validator → **MANUAL TEST GATE** → archive
 - **Validation:**
   1. Check that `openspec/changes/<change-name>/tasks.md` exists. If not, redirect: "No spec found at that path. Would you like to switch to Mode 1 (plan + implement)?"
   2. Check that `<change-name>` is kebab-case (not a number). If numeric, warn: "Change folder names must be descriptive (e.g. `bootstrap-client-portal-mvp`), not numeric. Rename the folder and update commit references before proceeding."
@@ -72,7 +72,7 @@ Present exactly these 5 modes:
 ### Mode 4: Adjust or bugfix
 - **Input required:** File reference + error description (stack trace, screenshot, or behavioral description)
 - **Prerequisite:** Bootstrap complete
-- **Flow:** orchestrator → team-leader (lite scope) → single-domain implementation agent → tester → validator → **MANUAL TEST GATE**
+- **Flow:** orchestrator → single-domain implementation agent (direct dispatch) → tester → validator → **MANUAL TEST GATE**
 - **Scope:** Minimal. No full wave execution. One domain only. If the fix spans multiple domains, redirect to Mode 1.
 
 ### Mode 5: Bootstrap project

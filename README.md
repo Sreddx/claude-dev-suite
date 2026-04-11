@@ -18,7 +18,50 @@ Distributes a shared delivery contract across all org repos — spec structure, 
 
 ## Installation
 
-### Via GitHub Action (recommended)
+### Quick install (recommended for individual repos)
+
+**One-liner (curl | bash):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sreddx/claude-dev-suite/main/install.sh | bash
+```
+
+With options:
+
+```bash
+# Install with a specific profile
+curl -fsSL https://raw.githubusercontent.com/Sreddx/claude-dev-suite/main/install.sh | bash -s -- --profile frontend
+
+# Install with a specific repo type
+curl -fsSL https://raw.githubusercontent.com/Sreddx/claude-dev-suite/main/install.sh | bash -s -- --repo-type monorepo
+
+# Dry run (preview what will be installed)
+curl -fsSL https://raw.githubusercontent.com/Sreddx/claude-dev-suite/main/install.sh | bash -s -- --dry-run
+```
+
+**Via npx:**
+
+```bash
+npx claude-dev-suite install
+```
+
+With options:
+
+```bash
+# Install with a specific profile
+npx claude-dev-suite install --profile frontend
+
+# Install with a specific repo type
+npx claude-dev-suite install --repo-type monorepo
+
+# Dry run
+npx claude-dev-suite install --dry-run
+
+# Install to a specific directory
+npx claude-dev-suite install --target ./my-project
+```
+
+### Via GitHub Action (recommended for org-wide rollout)
 
 ```yaml
 # .github/workflows/sdd-sync.yml
@@ -162,7 +205,7 @@ planner:
 └─────────────────────────────┘
   │
   ▼
-team-leader dispatches waves:
+orchestrator dispatches waves directly:
   Wave 1:  frontend (Figma MCP → fidelity) + backend + database  (parallel)
   Wave 2:  tester-front + tester-back     (parallel)
   Wave 3:  github-ops (PRs)
@@ -236,7 +279,7 @@ Accepted formats: XLSX, CSV, Markdown table, Notion/Linear/Jira export, or plain
 | orchestrator | opus | Top-level coordinator | airis-mcp-gateway, serena |
 | researcher | opus | Multi-hop research | airis-mcp-gateway, context7 |
 | planner | opus | Spec decomposition | airis-mcp-gateway, context7, serena, figma |
-| team-leader | opus | Wave coordination | serena |
+| team-leader | haiku | Reference doc only — dispatch merged into orchestrator | — |
 | frontend | sonnet | UI implementation | context7, figma |
 | backend | sonnet | API implementation | context7 |
 | database | sonnet | DB/migrations (11 ORMs, CLI-only) | — |
@@ -248,7 +291,7 @@ Accepted formats: XLSX, CSV, Markdown table, Notion/Linear/Jira export, or plain
 | agent-sync | sonnet | AGENTS.md state sync | serena |
 | agent-prep | sonnet | Project onboarding | airis-mcp-gateway, context7, serena |
 
-**Orchestrator and team-leader cannot write code.** `Write` and `Edit` are disallowed — all changes go through sub-agents.
+**Orchestrator cannot write code.** `Write` and `Edit` are disallowed — all changes go through implementation sub-agents dispatched directly. Sub-agents cannot spawn sub-agents in Claude Code, so all dispatch is one level deep.
 
 **No MCP is required.** Every agent falls back to native tools when its MCP is unavailable.
 
