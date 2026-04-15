@@ -22,6 +22,15 @@ compatible_tools: [claude-code, cursor, opencode, codex, copilot]
 Invoke at the start of any greenfield project or when asked to create an initial plan from scratch.
 Do NOT invoke for brownfield or incremental feature work.
 
+## Scope check before bootstrap
+
+If the PRD/backlog spans >1 epic or >8 stories, the orchestrator must decompose
+into multiple changes BEFORE invoking kickstart for artifact generation.
+kickstart generates artifacts for ONE change at a time.
+
+Invoke the scope decomposition gate in orchestrator.md first. Present the decomposition to the user
+and get approval. Only then invoke kickstart per-change sequentially.
+
 ## Step 1 — Detect project type
 - If `project-stack` section is absent from AGENTS.md AND no source code directories exist → GREENFIELD
 - If either condition is met → BROWNFIELD → skip to `rojas:explore`

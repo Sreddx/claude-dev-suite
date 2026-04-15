@@ -65,7 +65,7 @@ If verification passes, proceed to `opsx:archive`. If issues found, return to `r
 
 Verification should also emit a **post-verify checkpoint**: pass/fail status, blockers, follow-up path, and whether the approved scope stayed intact.
 
-## Manual Test Handoff
+## Manual Test Handoff (REQUIRED — never skip)
 
 After surfacing issues, always append:
 - A list of acceptance criteria from the original tasks.md that require manual verification

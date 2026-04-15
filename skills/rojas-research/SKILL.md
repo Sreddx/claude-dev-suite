@@ -19,11 +19,11 @@ Deep investigation for unknowns that require multi-hop search, evidence collecti
 2. **Plan research** — decompose the question into 3-5 sub-questions
 3. **Parallel search** — for each sub-question:
    - `context7:query-docs` for library-specific answers
-   - `WebSearch` for web results
+   - `WebSearch` (native tool) for web results
    - `airis-find` + `airis-exec` for any specialized tool that might help
 4. **Synthesize** — combine findings, resolve contradictions, note confidence levels
 5. **Persist** — write findings to `openspec/changes/<current>/research.md` with structured sections
-6. **Save session** — use `serena:write_memory` to preserve research state for cross-session continuity (if available)
+6. **Save session** — use `serena:write_memory` to preserve research state for cross-session continuity (if available); fallback: write to `openspec/changes/<current>/research.md` as file-based state
 7. **Output report** — write findings to `openspec/changes/<current>/research.md`
 
 ## Evidence Management
@@ -31,7 +31,7 @@ Deep investigation for unknowns that require multi-hop search, evidence collecti
 - Track sources for every claim
 - Note confidence level (high/medium/low) per finding
 - Flag contradictions explicitly
-- Prefer primary sources (official docs via context7) over secondary (blog posts via tavily)
+- Prefer primary sources (official docs via context7) over secondary (blog posts via WebSearch)
 
 ## When to Use
 
