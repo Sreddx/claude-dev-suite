@@ -1,7 +1,7 @@
 ---
 name: rojas:explore
 version: 1.1.0
-description: Enriched exploration — wraps opsx:explore with context7, tavily, and serena for brownfield project memory
+description: Enriched exploration — wraps opsx:explore with context7, WebSearch, and serena for brownfield project memory
 triggers: ["explore", "investigar", "what about", "qué hay sobre"]
 layer: 2
 wraps: opsx:explore
@@ -20,11 +20,11 @@ Investigate the problem space before proposing a spec. Enriches OpenSpec's nativ
    - Check `openspec/changes/<current>/research.md` for prior session findings
    - If no project memory exists, **ask the user** to generate a consistent project memory:
      > "This is a brownfield repository with existing code. To maintain a consistent reference across the full SDD cycle (especially for archive), I recommend generating a project memory now. Should I scan the codebase and create a structured project memory via serena?"
-   - If approved, scan key files (README, package.json, architecture docs, main modules) and persist via `serena:write_memory` with tag `project:memory` (or write to `openspec/changes/<current>/research.md` if serena unavailable)
+   - If approved, scan key files (README, package.json, architecture docs, main modules) and persist via `serena:write_memory` with tag `project:memory` (or write to `openspec/changes/<current>/research.md` as file-based fallback if serena unavailable)
    - This memory will be referenced during `rojas:verify` and `opsx:archive` for broad progress tracking
 3. **Identify libraries** — scan the codebase for dependencies relevant to the exploration topic
 4. **Fetch current docs** — use `context7:resolve-library-id` then `context7:query-docs` for each relevant library
-5. **Web research** (if needed) — use `WebSearch` for external context, patterns, or prior art
+5. **Web research** (if needed) — use `WebSearch` (native tool) for external context, patterns, or prior art
 6. **Delegate to OpenSpec** — execute `opsx:explore` with the enriched context
 7. **Persist findings** — write key discoveries to `openspec/changes/<current>/research.md` for cross-session retrieval
 
@@ -58,7 +58,7 @@ This memory becomes the **baseline reference** for:
 
 ## Behavior by Tool
 
-- **Claude Code (SuperClaude)**: dispatch as sub-agent via Agent tool; context7 and tavily available as native MCP calls
+- **Claude Code**: dispatch as sub-agent via Agent tool; context7 available as native MCP; use WebSearch (native tool) for web research
 - **Cursor / Copilot**: follow this flow inline; MCP calls via configured servers
 - **Codex / OpenCode**: same flow; MCP via local config
 

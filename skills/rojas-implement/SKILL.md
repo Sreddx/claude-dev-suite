@@ -119,6 +119,12 @@ If a task fails twice:
 2. Surface to the user with a summary of what was tried
 3. Do not retry a third time automatically
 
+## Agent isolation reminder
+
+You are running as a sub-agent dispatched by the orchestrator. You do NOT have access to the Agent tool.
+Do not attempt to delegate work to other agents. Execute all tasks assigned to you directly.
+If you encounter a task outside your domain, mark it as BLOCKED with a clear note and report back.
+
 ## When to Use
 
 - After `rojas:propose` has been approved

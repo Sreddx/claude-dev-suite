@@ -106,6 +106,16 @@ opsx:continue   ← produces tasks.md once design is locked
 
 The `rojas:propose` layer adds API validation and execution-transition guidance before signaling ready.
 
+## Output hard limits
+
+These limits are enforced — not optional. If any limit is exceeded, split the change before proceeding:
+
+- **Max 15 tasks** per tasks.md → split the change into multiple changes and report to orchestrator
+- **Max 5 spec files** per change → split the change into multiple changes
+- **Max 3 waves** per change → split into sequential changes
+- **Max 5 tasks** per wave → split the wave
+- If exceeded: explicitly tell the orchestrator "This change exceeds hard limits. Split required." and propose the decomposition before writing any files.
+
 ## When to Use
 
 - Starting any new feature or change

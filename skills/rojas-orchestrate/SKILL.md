@@ -195,6 +195,16 @@ On session resume:
 2. Report to user: "Resuming from Wave N — [status summary]"
 3. Continue from the first incomplete wave
 
+## Agent dispatch constraint (Claude Code platform limit)
+
+Sub-agents CANNOT spawn sub-agents. The Agent tool is only available to the main session (orchestrator).
+All dispatch in this skill MUST be from the orchestrator (main session) directly to implementation agents.
+Do NOT dispatch to team-leader and expect team-leader to dispatch further — team-leader is a reference document only.
+
+Dispatch chain: orchestrator → {frontend, backend, database, tester-front, tester-back, github-ops, validator}
+
+Every Agent() call must include the dispatch template from orchestrator.md to ensure sub-agents work in isolation without attempting further delegation.
+
 ## When to Use
 
 - Multi-task changes where parallelism matters
